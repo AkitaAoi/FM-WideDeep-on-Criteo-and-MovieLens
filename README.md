@@ -16,7 +16,7 @@ WideDeep：<img width="7278" height="1630" alt="模型内部数据流" src="http
 
 
 运行方式：
-pip install -r requirements.txt + python train.py
+pip install -r requirements.txt + python FM.py + WideDeep on Criteo.py + WideDeep on MoiveLens.py
 
 
 运行结果：
