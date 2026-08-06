@@ -1,23 +1,78 @@
 # FM-WideDeep-on-Criteo-and-MoiveLens
-项目简介：
+## 项目简介：
 使用FM算法与WideDeep算法分别在Criteo与MoiveLens数据集上进行预测，得到基线模型.
 
 
-数据集说明：
+## 数据集说明：
 Criteo使用train.txt, MoiveLens使用ml-100k数据集.
 
 
-模型流程图：
-FM：
-<img width="6134" height="1518" alt="数据流程图" src="https://github.com/user-attachments/assets/b2db7389-880f-48f8-8a76-d7ace3c07961" />
+## 模型流程图：
+#### FM：
+```mermaid
+graph LR
+    subgraph 输入
+        A[输入 X<br>形状: (batch, n)]
+    end
 
-WideDeep：<img width="7278" height="1630" alt="模型内部数据流" src="https://github.com/user-attachments/assets/a448953a-95a4-4d08-a41c-28dba7808f0b" />
+    subgraph 线性部分
+        A --> B[线性层<br>w0 + Σ wi * xi]
+        B --> C[linear_part<br>形状: (batch, 1)]
+    end
 
+    subgraph 二阶交互部分
+        A --> D[计算<br>Σᵢ vᵢ, f * xᵢ]
+        D --> E[平方<br>(Σᵢ vᵢ, f * xᵢ)²]
+        A --> F[计算<br>Σᵢ vᵢ, f² * xᵢ²]
+        F --> G[Sum_f<br>对 f 求和]
+        E --> H[相减]
+        G --> H
+        H --> I[× 0.5]
+        I --> J[inter_part<br>形状: (batch, 1)]
+    end
 
-运行方式：
+    subgraph 输出
+        C --> K[相加<br>linear_part + inter_part]
+        J --> K
+        K --> L[Sigmoid]
+        L --> M[y_pred<br>形状: (batch, 1)]
+    end
+```
+#### WideDeep：
+
+```mermaid
+graph LR
+    A[输入<br>(batch, 13+26)] --> B[分离特征]
+    
+    B --> C1[X_dense<br>(batch, 13)]
+    B --> C2[X_sparse<br>(batch, 26)]
+    
+    subgraph Wide 分支
+        C1 --> D1[线性层<br>dense_linear]
+        D1 --> E1[wide_output<br>(batch, 1)]
+        
+        C2 --> D2[Embedding(vocab_size, 1)<br>每个特征查表取权重]
+        D2 --> D3[相加所有权重]
+        D3 --> E1
+    end
+    
+    subgraph Deep 分支
+        C2 --> F1[Embedding(vocab_size, embed_dim)<br>每个特征查表取向量]
+        F1 --> F2[拼接所有向量<br>(batch, 26*embed_dim)]
+        F2 --> F3[全连接网络 MLP<br>隐藏层 + 激活函数]
+        F3 --> E2[deep_output<br>(batch, 1)]
+    end
+    
+    E1 --> G[wide_output + deep_output]
+    E2 --> G
+    G --> H[sigmoid]
+    H --> I[预测概率 y_pred]
+```
+
+## 运行方式：
 pip install -r requirements.txt + python FM.py + WideDeep on Criteo.py + WideDeep on MoiveLens.py
 
-代码结构说明:
+## 代码结构说明:
 
 FM.py：包含 FM 模型定义、Criteo 和 MovieLens 数据的加载与训练逻辑。
 
@@ -25,7 +80,7 @@ WideDeep on Criteo.py：包含 Wide & Deep 模型在 Criteo 数据集上的训�
 
 WideDeep on MoiveLens.py：包含 Wide & Deep 模型在 MovieLens 数据集上的训练与评估
 
-运行结果：
+## 运行结果：
 
 FM on Criteo(Acc = 0.7867):
 
