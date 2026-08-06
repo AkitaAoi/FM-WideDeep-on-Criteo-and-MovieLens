@@ -1,4 +1,25 @@
 # FM-WideDeep-on-Criteo-and-MoiveLens
+项目简介：
+使用FM算法与WideDeep算法分别在Criteo与MoiveLens数据集上进行预测，得到基线模型.
+
+
+数据集说明：
+Criteo使用train.txt, MoiveLens使用ml-100k数据集.
+
+
+模型流程图：
+FM：
+WideDeep：
+
+
+运行方式：
+pip install -r requirements.txt + python train.py
+
+
+运行结果：
+
+
+
 基于FM的CTR预测: [https://blog.csdn.net/Amarashi/article/details/163417299?spm=1011.2415.3001.5331]
 
 基于WideDeep的CTR预测: [https://blog.csdn.net/Amarashi/article/details/163399394?spm=1011.2415.3001.5331]
