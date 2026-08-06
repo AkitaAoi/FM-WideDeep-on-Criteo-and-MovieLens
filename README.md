@@ -17,6 +17,13 @@ WideDeep：<img width="7278" height="1630" alt="模型内部数据流" src="http
 运行方式：
 pip install -r requirements.txt + python FM.py + WideDeep on Criteo.py + WideDeep on MoiveLens.py
 
+代码结构说明:
+
+FM.py：包含 FM 模型定义、Criteo 和 MovieLens 数据的加载与训练逻辑。
+
+WideDeep on Criteo.py：包含 Wide & Deep 模型在 Criteo 数据集上的训练与评估。
+
+WideDeep on MoiveLens.py：包含 Wide & Deep 模型在 MovieLens 数据集上的训练与评估
 
 运行结果：
 
