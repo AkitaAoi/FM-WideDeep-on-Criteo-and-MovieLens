@@ -27,19 +27,19 @@ WideDeep on MoiveLens.py：包含 Wide & Deep 模型在 MovieLens 数据集上�
 
 运行结果：
 
-FM on Criteo:
+FM on Criteo(Acc = 0.7867):
 
 <img width="640" height="480" alt="Figure_2" src="https://github.com/user-attachments/assets/510bca2f-b5df-4626-94d7-eb8ff439598b" />
 
-FM on MoiveLens(k = 32):
+FM on MoiveLens(k = 32, AUC = 0.7526):
 
 <img width="640" height="480" alt="k = 32" src="https://github.com/user-attachments/assets/e23982cc-e9f6-4c35-bbf6-1be7177f78bf" />
 
-WideDeep on Criteo:
+WideDeep on Criteo(Acc = 0.7775):
 
 <img width="467" height="168" alt="image" src="https://github.com/user-attachments/assets/b91f3104-815a-4198-b2d8-8f764df9c2ca" />
 
-WideDeep on MoiveLens:
+WideDeep on MoiveLens(AUC = 0.8010):
 
 <img width="957" height="357" alt="运行结果" src="https://github.com/user-attachments/assets/59730d88-cd57-48c1-bbf7-7222e1c62f25" />
 
