@@ -10,65 +10,64 @@ Criteo使用train.txt, MoiveLens使用ml-100k数据集.
 ## 模型流程图：
 #### FM：
 ```mermaid
-graph LR
+flowchart LR
     subgraph 输入
-        A[输入 X<br>形状: (batch, n)]
+        A[输入 X batch x n]
     end
 
     subgraph 线性部分
-        A --> B[线性层<br>w0 + Σ wi * xi]
-        B --> C[linear_part<br>形状: (batch, 1)]
+        A --> B[线性变换 w0 + sum wi*xi]
+        B --> C[linear_part batch x 1]
     end
 
     subgraph 二阶交互部分
-        A --> D[计算<br>Σᵢ vᵢ, f * xᵢ]
-        D --> E[平方<br>(Σᵢ vᵢ, f * xᵢ)²]
-        A --> F[计算<br>Σᵢ vᵢ, f² * xᵢ²]
-        F --> G[Sum_f<br>对 f 求和]
-        E --> H[相减]
+        A --> D[计算 sum vi,f * xi]
+        D --> E[求平方]
+        A --> F[计算 sum vi,f^2 * xi^2]
+        F --> G[对因子求和]
+        E --> H[两项相减]
         G --> H
-        H --> I[× 0.5]
-        I --> J[inter_part<br>形状: (batch, 1)]
+        H --> I[乘以 0.5]
+        I --> J[inter_part batch x 1]
     end
 
     subgraph 输出
-        C --> K[相加<br>linear_part + inter_part]
+        C --> K[相加 linear + inter]
         J --> K
         K --> L[Sigmoid]
-        L --> M[y_pred<br>形状: (batch, 1)]
+        L --> M[y_pred batch x 1]
     end
 ```
-#### WideDeep：
 
+#### WideDeep：
 ```mermaid
-graph LR
-    A[输入<br>(batch, 13+26)] --> B[分离特征]
-    
-    B --> C1[X_dense<br>(batch, 13)]
-    B --> C2[X_sparse<br>(batch, 26)]
-    
+flowchart LR
+    A[输入 batch, 13+26] --> B[分离特征]
+
+    B --> C1[X_dense batch, 13]
+    B --> C2[X_sparse batch, 26]
+
     subgraph Wide 分支
-        C1 --> D1[线性层<br>dense_linear]
-        D1 --> E1[wide_output<br>(batch, 1)]
-        
-        C2 --> D2[Embedding(vocab_size, 1)<br>每个特征查表取权重]
+        C1 --> D1[线性层 dense_linear]
+        D1 --> E1[wide_output batch, 1]
+
+        C2 --> D2[Embedding vocab_size, 1 查表取权重]
         D2 --> D3[相加所有权重]
         D3 --> E1
     end
-    
+
     subgraph Deep 分支
-        C2 --> F1[Embedding(vocab_size, embed_dim)<br>每个特征查表取向量]
-        F1 --> F2[拼接所有向量<br>(batch, 26*embed_dim)]
-        F2 --> F3[全连接网络 MLP<br>隐藏层 + 激活函数]
-        F3 --> E2[deep_output<br>(batch, 1)]
+        C2 --> F1[Embedding vocab_size, embed_dim 查表取向量]
+        F1 --> F2[拼接所有向量 batch, 26*embed_dim]
+        F2 --> F3[全连接网络 MLP 隐藏层+激活]
+        F3 --> E2[deep_output batch, 1]
     end
-    
+
     E1 --> G[wide_output + deep_output]
     E2 --> G
     G --> H[sigmoid]
     H --> I[预测概率 y_pred]
 ```
-
 ## 运行方式：
 pip install -r requirements.txt + python FM.py + WideDeep on Criteo.py + WideDeep on MoiveLens.py
 
