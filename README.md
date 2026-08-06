@@ -1,4 +1,3 @@
-<img width="6134" height="1518" alt="数据流程图" src="https://github.com/user-attachments/assets/2ae17e9e-3eee-4391-92a0-3518e3a6d662" />
 # FM-WideDeep-on-Criteo-and-MoiveLens
 项目简介：
 使用FM算法与WideDeep算法分别在Criteo与MoiveLens数据集上进行预测，得到基线模型.
@@ -20,7 +19,21 @@ pip install -r requirements.txt + python FM.py + WideDeep on Criteo.py + WideDee
 
 
 运行结果：
+
+FM on Criteo:
+
+<img width="640" height="480" alt="Figure_2" src="https://github.com/user-attachments/assets/510bca2f-b5df-4626-94d7-eb8ff439598b" />
+
+FM on MoiveLens(k = 32):
+
+<img width="640" height="480" alt="k = 32" src="https://github.com/user-attachments/assets/e23982cc-e9f6-4c35-bbf6-1be7177f78bf" />
+
+WideDeep on Criteo:
+
+<img width="467" height="168" alt="image" src="https://github.com/user-attachments/assets/b91f3104-815a-4198-b2d8-8f764df9c2ca" />
+
 WideDeep on MoiveLens:
+
 <img width="957" height="357" alt="运行结果" src="https://github.com/user-attachments/assets/59730d88-cd57-48c1-bbf7-7222e1c62f25" />
 
 
