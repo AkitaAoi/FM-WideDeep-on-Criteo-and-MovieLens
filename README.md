@@ -81,6 +81,14 @@ WideDeep on MoiveLens.py：包含 Wide & Deep 模型在 MovieLens 数据集上�
 
 ## 运行结果：
 
+| 模型 | 数据集 | 主要指标 | 结果  |
+| ------ | :-------: |------------- |---|
+| FM | Criteo | 准确率 |0.7867|
+| FM | ml-100k | AUC |0.7526|
+| WideDeep | Criteo | 准确率 |0.7775|
+| WideDeep | ml-100k | AUC |0.8010|
+
+
 FM on Criteo(Acc = 0.7867):
 
 <img width="640" height="480" alt="Figure_2" src="https://github.com/user-attachments/assets/510bca2f-b5df-4626-94d7-eb8ff439598b" />
