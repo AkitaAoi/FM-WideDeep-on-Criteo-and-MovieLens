@@ -294,15 +294,19 @@ def load_movielens_with_context(data_path='.', test_size=0.2, random_state=42, t
     # 词汇表大小直接使用之前统计的
     sparse_vocab_sizes = [n_users, n_items, n_genders, n_occupations]
 
-    # 分离特征和标签
-    X_dense = data[dense_features].values.astype(np.float32)
-    X_sparse = data[sparse_features].values.astype(np.int64)  # 整数索引
+    # ========== 关键修改：在提取特征之前，按时间戳排序 ==========
+    data = data.sort_values('timestamp').reset_index(drop=True)
+
+    # 然后分离特征和标签（从排序后的 data 中提取）
+    X_dense = data[['age']].values.astype(np.float32)   # 注意这里用 'age' 原始值，暂不归一化
+    X_sparse = data[['user_encoded', 'item_encoded', 'gender_encoded', 'occupation_encoded']].values.astype(np.int64)
     y = data['label'].values.astype(np.float32)
 
-    # 划分训练集和测试集
-    X_dense_train, X_dense_test, X_sparse_train, X_sparse_test, y_train, y_test = train_test_split(
-        X_dense, X_sparse, y, test_size=test_size, random_state=random_state
-    )
+    # 按时间划分（前 80% 训练，后 20% 测试）
+    split_idx = int(len(data) * (1 - test_size))
+    X_dense_train, X_dense_test = X_dense[:split_idx], X_dense[split_idx:]
+    X_sparse_train, X_sparse_test = X_sparse[:split_idx], X_sparse[split_idx:]
+    y_train, y_test = y[:split_idx], y[split_idx:]
 
     # 8. 处理数值型上下文特征（归一化到0~1）, 避免数据泄露
     scaler = StandardScaler()
@@ -393,7 +397,7 @@ def train(file_path):
     print(f"Test AUC: {test_auc:.4f}, Test Acc: {test_acc:.4f}")
 
     # 作图
-    utils.plot_loss_curve(losses, val_losses=None, title='Training Loss')
+    # utils.plot_loss_curve(losses, val_losses=None, title='Training Loss')
 
 
 if __name__ == '__main__':

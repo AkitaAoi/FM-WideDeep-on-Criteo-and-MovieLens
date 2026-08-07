@@ -56,7 +56,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
 import config
 
-def read_criteo(file_path, test_size = 0.3):
+def read_criteo(file_path, test_size = 0.3, neg_sample_ratio = 3):
     data = pd.read_csv(file_path)
 
     dense_feature = ['I' + str(i) for i in range(1, 14)]
@@ -77,11 +77,15 @@ def read_criteo(file_path, test_size = 0.3):
     # 划分训练集和测试集
     x_train, x_test, y_train, y_test = train_test_split(x, y, test_size = test_size)
 
+    # 负采样（只在训练集）
+    if neg_sample_ratio > 0:
+        x_train, y_train = utils.sample_negative_data_fm(x_train, y_train, neg_ratio=neg_sample_ratio, random_state=config.RANDOM_STATE)
+
     # 转为张量
-    x_train = torch.tensor(x_train, dtype=torch.float32)
-    y_train = torch.tensor(y_train.values, dtype=torch.float32).view(-1, 1)
-    x_test = torch.tensor(x_test, dtype=torch.float32)
-    y_test = torch.tensor(y_test.values, dtype=torch.float32).view(-1, 1)
+    x_train = utils.to_tensor(x_train, dtype=torch.float32)
+    y_train = utils.to_tensor(y_train, dtype=torch.float32, is_label=True)
+    x_test = utils.to_tensor(x_test, dtype=torch.float32)
+    y_test = utils.to_tensor(y_test, dtype=torch.float32, is_label=True)
 
     return (x_train, y_train), (x_test, y_test)
 
@@ -221,10 +225,13 @@ def load_movielens_with_context(data_path='.', test_size=0.2, random_state=42, t
 
     y = data['label'].values.astype(np.float32)
 
-    # 划分训练集和测试集
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=test_size, random_state=random_state
-    )
+    data = data.sort_values('timestamp').reset_index(drop=True)
+
+    # 按时间划分（前 80% 训练，后 20% 测试）
+    split_idx = int(len(data) * (1 - test_size))
+    X_train, X_test = X[:split_idx], X[split_idx:]
+    y_train, y_test = y[:split_idx], y[split_idx:]
+
 
     # 转为 PyTorch Tensor
     X_train = torch.tensor(X_train, dtype=torch.float32)
@@ -249,14 +256,13 @@ from sklearn.metrics import accuracy_score
 def train(file_path, test_size):
     utils.set_seed(config.RANDOM_STATE)
     # MovieLens数据集
-    (x_train, y_train), (x_test, y_test), n = load_movielens_with_context(file_path, test_size)
-
-    k = config.FM_EMBED_DIM  # 隐向量维度
+    # (x_train, y_train), (x_test, y_test), n = load_movielens_with_context(file_path, test_size)
+    # k = config.FM_EMBED_DIM  # 隐向量维度
 
     # criteo数据集
-    # (x_train, y_train), (x_test, y_test) = read_criteo(file_path, test_size = test_size)
-    # n = x_train.shape[1]
-    # k = 8
+    (x_train, y_train), (x_test, y_test) = read_criteo(file_path, test_size = test_size)
+    n = x_train.shape[1]
+    k = 2
 
     # 模型
     model = FMs(
@@ -266,8 +272,8 @@ def train(file_path, test_size):
         v_reg = config.FM_V_REG
     )
     criterion = nn.BCELoss()
-    # optimizer = torch.optim.SGD(model.parameters(), lr=0.0001)
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.05)
+    optimizer = torch.optim.SGD(model.parameters(), lr=0.5)
+    # optimizer = torch.optim.Adam(model.parameters(), lr=0.05)
 
     # 训练
     losses = []
@@ -302,4 +308,4 @@ def train(file_path, test_size):
 
 
 if __name__ == '__main__':
-    train(file_path =config.MOVIELENS_DIR, test_size= config.TEST_SIZE)
+    train(file_path =config.CRITEO_FILE, test_size= config.TEST_SIZE)

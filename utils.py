@@ -70,9 +70,67 @@ def create_wideddeep_loader(dense_data, sparse_data, labels, batch_size, shuffle
     dataset = TensorDataset(dense_data, sparse_data, labels)
     return DataLoader(dataset, batch_size=batch_size, shuffle=shuffle)
 
-def create_fm_loader(features, labels, batch_size, shuffle=True):
+
+def sample_negative_data_fm(X, y, neg_ratio=3, random_state=42):
     """
-    为 FM 模型创建 DataLoader，返回 (X, label)
+    对 FM 的训练集进行负采样。
+    X: 特征矩阵 (样本数, 特征数)
+    y: 标签 (样本数,)
+    返回采样后的 (X, y)
     """
-    dataset = TensorDataset(features, labels)
-    return DataLoader(dataset, batch_size=batch_size, shuffle=shuffle)
+    np.random.seed(random_state)
+
+    # 确保 y 是 numpy 数组
+    if hasattr(y, 'values'):
+        y = y.values
+    if hasattr(X, 'values'):
+        X = X.values
+
+    pos_mask = (y == 1)
+    neg_mask = (y == 0)
+
+    X_pos = X[pos_mask]
+    y_pos = y[pos_mask]
+
+    X_neg = X[neg_mask]
+    y_neg = y[neg_mask]  # 现在 y_neg 已经是 numpy 数组
+
+    n_pos = len(y_pos)
+    n_neg_target = int(n_pos * neg_ratio)
+
+    if len(y_neg) > n_neg_target:
+        indices = np.random.choice(len(y_neg), n_neg_target, replace=False)
+        X_neg = X_neg[indices]
+        y_neg = y_neg[indices]  # numpy 数组支持位置索引
+
+    X_sampled = np.concatenate([X_pos, X_neg], axis=0)
+    y_sampled = np.concatenate([y_pos, y_neg], axis=0)
+
+    shuffle_idx = np.random.permutation(len(y_sampled))
+    X_sampled = X_sampled[shuffle_idx]
+    y_sampled = y_sampled[shuffle_idx]
+
+    print(f"负采样后：正样本 {n_pos}，负样本 {len(y_neg)}，比例 1:{len(y_neg) / n_pos:.1f}")
+    return X_sampled, y_sampled
+
+
+def to_tensor(data, dtype=torch.float32, is_label=False):
+    """
+    将数据转换为 torch.Tensor。
+    - data: 可以是 numpy ndarray, pandas Series, pandas DataFrame 或 list
+    - dtype: 目标数据类型（默认 torch.float32）
+    - is_label: 如果为 True，则将张量形状调整为 (-1, 1)
+    返回: torch.Tensor
+    """
+    # 如果 data 是 pandas 对象，提取 .values
+    if hasattr(data, 'values'):
+        data = data.values
+    # 如果还不是 numpy 数组，强制转换
+    if not isinstance(data, np.ndarray):
+        data = np.array(data)
+    # 转为张量
+    tensor = torch.tensor(data, dtype=dtype)
+    # 如果是标签，确保形状为 (batch, 1)
+    if is_label:
+        tensor = tensor.view(-1, 1)
+    return tensor

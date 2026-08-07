@@ -37,7 +37,6 @@ class Wide(nn.Module):
 
         return dense_out + sparse_out
 
-
 class Deep(nn.Module):
     def __init__(self, sparse_vocab_sizes, embed_dim, output_dim, hidden_units, activation='relu'):
         """
@@ -111,7 +110,7 @@ from sklearn.preprocessing import MinMaxScaler, LabelEncoder
 from sklearn.model_selection import train_test_split
 
 
-def load_criteo_data(file_path, test_size=config.TEST_SIZE, random_state=config.RANDOM_STATE):
+def load_criteo_data(file_path, test_size=config.TEST_SIZE, random_state=config.RANDOM_STATE, neg_sample_ratio=3):
     """
     加载Criteo数据，返回：
     - 稠密特征矩阵 (样本数, 13)
@@ -146,8 +145,44 @@ def load_criteo_data(file_path, test_size=config.TEST_SIZE, random_state=config.
 
     # 划分训练集和测试集
     X_dense_train, X_dense_test, X_sparse_train, X_sparse_test, y_train, y_test = train_test_split(
-        X_dense, X_sparse, y, test_size=test_size, random_state=random_state
-    )
+        X_dense, X_sparse, y, test_size=test_size, random_state=random_state)
+
+    # ========== 负采样（仅对训练集） ==========
+    if neg_sample_ratio > 0:
+        # 分离训练集中的正负样本
+        pos_mask = (y_train == 1)
+        neg_mask = (y_train == 0)
+        X_dense_pos = X_dense_train[pos_mask]
+        X_sparse_pos = X_sparse_train[pos_mask]
+        y_pos = y_train[pos_mask]
+
+        X_dense_neg = X_dense_train[neg_mask]
+        X_sparse_neg = X_sparse_train[neg_mask]
+        y_neg = y_train[neg_mask]
+
+        # 计算需要采样的负样本数量
+        n_pos = len(y_pos)
+        n_neg_target = int(n_pos * neg_sample_ratio)
+
+        # 如果负样本总数大于目标数量，则随机采样；否则全部保留
+        if len(y_neg) > n_neg_target:
+            indices = np.random.choice(len(y_neg), n_neg_target, replace=False)
+            X_dense_neg = X_dense_neg[indices]
+            X_sparse_neg = X_sparse_neg[indices]
+            y_neg = y_neg[indices]
+
+        # 合并正负样本并打乱
+        X_dense_train = np.concatenate([X_dense_pos, X_dense_neg], axis=0)
+        X_sparse_train = np.concatenate([X_sparse_pos, X_sparse_neg], axis=0)
+        y_train = np.concatenate([y_pos, y_neg], axis=0)
+
+        # 打乱训练集（避免正负样本聚集）
+        shuffle_idx = np.random.permutation(len(y_train))
+        X_dense_train = X_dense_train[shuffle_idx]
+        X_sparse_train = X_sparse_train[shuffle_idx]
+        y_train = y_train[shuffle_idx]
+
+        print(f"负采样后训练集：正样本 {n_pos}，负样本 {len(y_neg)}，比例 1:{len(y_neg) / n_pos:.1f}")
 
     # 转为张量
     X_dense_train = torch.tensor(X_dense_train, dtype=torch.float32)
@@ -176,18 +211,18 @@ def train(file_path):
     model = WideDeep(
         dense_num=13,
         sparse_vocab_sizes=sparse_vocab_sizes,
-        embed_dim=config.WD_EMBED_DIM,
+        embed_dim=8,
         output_dim=1,
-        hidden_units=config.WD_HIDDEN_UNITS,
+        hidden_units=[32, 16],
         activation='relu'
     )
 
     criterion = nn.BCELoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.005)
 
     # 训练
     losses = []
-    epochs = config.EPOCHS
+    epochs = 20
     for epoch in range(epochs):
         model.train()
         total_loss = 0
@@ -206,7 +241,7 @@ def train(file_path):
     print(f"Test AUC: {test_auc:.4f}, Test Acc: {test_acc:.4f}")
 
     # 作图
-    utils.plot_loss_curve(losses, val_losses=None, title='Training Loss')
+    # utils.plot_loss_curve(losses, val_losses=None, title='Training Loss')
 
 if __name__ == '__main__':
     train(file_path = config.CRITEO_FILE)
