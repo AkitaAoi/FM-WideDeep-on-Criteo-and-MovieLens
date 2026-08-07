@@ -2,6 +2,26 @@
 ## 项目简介：
 使用FM算法与WideDeep算法分别在Criteo与MovieLens数据集上进行预测，得到基线模型.
 
+## 项目结构
+
+```
+FM-WideDeep-on-Criteo-and-MovieLens/
+├── Data/
+│   ├── train.txt                # Criteo 数据集
+│   └── ml-100k/                 # MovieLens 数据集
+│       ├── u.data
+│       ├── u.user
+│       └── u.item
+├── FM.py                        # FM 模型训练脚本
+├── WideDeep on Criteo.py       # WideDeep 在 Criteo 上的训练
+├── WideDeep on MovieLens.py    # WideDeep 在 MovieLens 上的训练
+├── utils.py                     # 辅助函数
+├── config.py                    # 配置文件
+├── requirements.txt             # 依赖列表
+├── README.md
+└── .gitignore
+```
+
 
 ## 数据集说明：
 Criteo使用train.txt, MovieLens使用ml-100k数据集.
@@ -81,12 +101,12 @@ WideDeep on MoiveLens.py：包含 Wide & Deep 模型在 MovieLens 数据集上�
 
 ## 运行结果：
 
-| 模型 | 数据集 | 主要指标 | 结果  |
-| ------ | :-------: |------------- |---|
-| FM | Criteo | 准确率 |0.7867|
-| FM | ml-100k | AUC |0.7526|
-| WideDeep | Criteo | 准确率 |0.7775|
-| WideDeep | ml-100k | AUC |0.8010|
+| 模型 | 数据集 | 主要指标 | 结果     |
+| ------ | :-------: |------------- |--------|
+| FM | Criteo | 准确率 | 0.7867 |
+| FM | ml-100k | AUC | 0.7526 |
+| WideDeep | Criteo | 准确率 | 0.7775 |
+| WideDeep | ml-100k | AUC | 0.8009 |
 
 
 FM on Criteo(Acc = 0.7867):
@@ -101,7 +121,7 @@ WideDeep on Criteo(Acc = 0.7775):
 
 <img width="467" height="168" alt="image" src="https://github.com/user-attachments/assets/b91f3104-815a-4198-b2d8-8f764df9c2ca" />
 
-WideDeep on MovieLens(AUC = 0.8010):
+WideDeep on MovieLens(AUC = 0.8009):
 
 <img width="957" height="357" alt="运行结果" src="https://github.com/user-attachments/assets/59730d88-cd57-48c1-bbf7-7222e1c62f25" />
 

@@ -1,7 +1,7 @@
 import torch.nn as nn
 
 class Wide(nn.Module):
-    def __init__(self, dense_num, sparse_vocab_sizes, output_dim=1, l2_reg=1e-4):
+    def __init__(self, dense_num, sparse_vocab_sizes, output_dim=1):
         """
         dense_num: 稠密特征数量（如13）
         sparse_vocab_sizes: 每个稀疏特征的词汇表大小列表（长度等于稀疏特征个数）
@@ -104,14 +104,14 @@ class WideDeep(nn.Module):
         deep_out = self.deep(sparse_indices)
         return torch.sigmoid(0.5 * (wide_out + deep_out))
 
-
+import config
 import pandas as pd
 import numpy as np
 from sklearn.preprocessing import MinMaxScaler, LabelEncoder
 from sklearn.model_selection import train_test_split
 
 
-def load_criteo_data(file_path, test_size=0.2, random_state=42):
+def load_criteo_data(file_path, test_size=config.TEST_SIZE, random_state=config.RANDOM_STATE):
     """
     加载Criteo数据，返回：
     - 稠密特征矩阵 (样本数, 13)
@@ -159,51 +159,26 @@ def load_criteo_data(file_path, test_size=0.2, random_state=42):
 
     return (X_dense_train, X_sparse_train, y_train), (X_dense_test, X_sparse_test, y_test), sparse_vocab_sizes
 
-
+import utils
 import torch
-import random
 import torch.nn as nn
-from torch.utils.data import DataLoader, TensorDataset
-from sklearn.metrics import accuracy_score
 
-
-def set_seed(seed=42):
-    """
-    固定所有随机种子，确保实验可复现
-    """
-    # 1. Python 内置 random 模块
-    random.seed(seed)
-
-    # 2. NumPy 随机数生成器
-    np.random.seed(seed)
-
-    # 3. PyTorch CPU 随机数生成器
-    torch.manual_seed(seed)
-
-    # 4. PyTorch GPU 随机数生成器（如果使用 GPU）
-    if torch.cuda.is_available():
-        torch.cuda.manual_seed_all(seed)
-        # 确保 CUDA 运算完全可复现（会牺牲部分性能）
-        torch.backends.cudnn.deterministic = True
-        torch.backends.cudnn.benchmark = False
-
-def train():
-    set_seed(42)
-    file_path = 'train.txt'
+def train(file_path):
+    utils.set_seed(config.RANDOM_STATE)
     (X_dense_train, X_sparse_train, y_train), (X_dense_test, X_sparse_test,
                                                y_test), sparse_vocab_sizes = load_criteo_data(file_path)
 
     # DataLoader
-    train_dataset = TensorDataset(X_dense_train, X_sparse_train, y_train)
-    train_loader = DataLoader(train_dataset, batch_size=128, shuffle=True)
+    train_loader = utils.create_wideddeep_loader(X_dense_train, X_sparse_train, y_train, batch_size = config.BATCH_SIZE)
+    test_loader = utils.create_wideddeep_loader(X_dense_test, X_sparse_test, y_test, batch_size = config.BATCH_SIZE)
 
     # 模型
     model = WideDeep(
         dense_num=13,
         sparse_vocab_sizes=sparse_vocab_sizes,
-        embed_dim=2,
+        embed_dim=config.WD_EMBED_DIM,
         output_dim=1,
-        hidden_units=[16, 8, 4, 2],
+        hidden_units=config.WD_HIDDEN_UNITS,
         activation='relu'
     )
 
@@ -211,7 +186,8 @@ def train():
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 
     # 训练
-    epochs = 50
+    losses = []
+    epochs = config.EPOCHS
     for epoch in range(epochs):
         model.train()
         total_loss = 0
@@ -222,17 +198,15 @@ def train():
             loss.backward()
             optimizer.step()
             total_loss += loss.item()
+        losses.append(total_loss)
         print(f'Epoch {epoch + 1}, Loss: {total_loss / len(train_loader):.6f}')
 
     # 评估
-    model.eval()
-    with torch.no_grad():
-        pred_test = model(X_dense_test, X_sparse_test)
-        pred_binary = (pred_test >= 0.5).float().numpy().flatten()
-        y_true = y_test.numpy().flatten()
-        acc = accuracy_score(y_true, pred_binary)
-        print(f'Test Accuracy: {acc:.4f}')
+    test_auc, test_acc = utils.evaluate_binary(model, test_loader)
+    print(f"Test AUC: {test_auc:.4f}, Test Acc: {test_acc:.4f}")
 
+    # 作图
+    utils.plot_loss_curve(losses, val_losses=None, title='Training Loss')
 
 if __name__ == '__main__':
-    train()
+    train(file_path = config.CRITEO_FILE)

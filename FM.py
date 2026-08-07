@@ -54,7 +54,7 @@ class FMs(nn.Module):
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
-import matplotlib.pyplot as plt
+import config
 
 def read_criteo(file_path, test_size = 0.3):
     data = pd.read_csv(file_path)
@@ -241,38 +241,17 @@ def load_movielens_with_context(data_path='.', test_size=0.2, random_state=42, t
     return (X_train, y_train), (X_test, y_test), n
 
 import torch
-import random
 import numpy as np
-
-def set_seed(seed=42):
-    """
-    固定所有随机种子，确保实验可复现
-    """
-    # 1. Python 内置 random 模块
-    random.seed(seed)
-
-    # 2. NumPy 随机数生成器
-    np.random.seed(seed)
-
-    # 3. PyTorch CPU 随机数生成器
-    torch.manual_seed(seed)
-
-    # 4. PyTorch GPU 随机数生成器（如果使用 GPU）
-    if torch.cuda.is_available():
-        torch.cuda.manual_seed_all(seed)
-        # 确保 CUDA 运算完全可复现（会牺牲部分性能）
-        torch.backends.cudnn.deterministic = True
-        torch.backends.cudnn.benchmark = False
-
+import utils
 from sklearn.metrics import roc_auc_score
 from sklearn.metrics import accuracy_score
 
-def train(file_path, test_size = 0.3):
-    set_seed(42)
+def train(file_path, test_size):
+    utils.set_seed(config.RANDOM_STATE)
     # MovieLens数据集
-    (x_train, y_train), (x_test, y_test), n = load_movielens_with_context('ml-100k/')
+    (x_train, y_train), (x_test, y_test), n = load_movielens_with_context(file_path, test_size)
 
-    k = 32  # 隐向量维度
+    k = config.FM_EMBED_DIM  # 隐向量维度
 
     # criteo数据集
     # (x_train, y_train), (x_test, y_test) = read_criteo(file_path, test_size = test_size)
@@ -283,8 +262,8 @@ def train(file_path, test_size = 0.3):
     model = FMs(
         n = n,
         k = k,
-        w_reg = 1e-4,
-        v_reg = 1e-4
+        w_reg = config.FM_W_REG,
+        v_reg = config.FM_V_REG
     )
     criterion = nn.BCELoss()
     # optimizer = torch.optim.SGD(model.parameters(), lr=0.0001)
@@ -318,13 +297,9 @@ def train(file_path, test_size = 0.3):
         print(f'Accuracy {acc:.4f}')
 
     # 作图
-    plt.plot(range(1, 101), losses)
-    plt.xlabel('Epoch')
-    plt.ylabel('Loss')
-    plt.title('Training Loss Curve')
-    plt.grid(True)
-    plt.show()
+    utils.plot_loss_curve(losses, val_losses=None, title='Training Loss')
+
 
 
 if __name__ == '__main__':
-    train(file_path = 'train.txt')
+    train(file_path =config.MOVIELENS_DIR, test_size= config.TEST_SIZE)
