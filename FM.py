@@ -139,7 +139,7 @@ def load_movielens_100k(data_path='.', test_size=0.2, random_state=42, threshold
 
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 
-def load_movielens_with_context(data_path='.', test_size=0.2, random_state=42, threshold=3):
+def load_movielens_with_context(data_path='.', test_size=0.2, threshold=3):
     # 1. 读取评分数据（u.data）
     ratings = pd.read_csv(
         f'{data_path}/u.data',
@@ -306,6 +306,64 @@ def train(file_path, test_size):
     utils.plot_loss_curve(losses, val_losses=None, title='Training Loss')
 
 
+from sklearn.model_selection import KFold
+from torch.utils.data import DataLoader, TensorDataset
+
+
+def cross_validate_fm(file_path, n_splits=5, k=32, lr=0.01, epochs=5):
+    # 1. 加载完整数据（仅训练集部分，用于交叉验证）
+    (X, y), _, _ = load_movielens_with_context(file_path)  # 假设此函数返回完整训练集
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    kf = KFold(n_splits=n_splits, shuffle=True, random_state=42)
+    auc_scores = []
+
+    for fold, (train_idx, val_idx) in enumerate(kf.split(X)):
+        print(f"\n===== Fold {fold + 1}/{n_splits} =====")
+
+        # 2. 分割数据
+        X_train, X_val = X[train_idx], X[val_idx]
+        y_train, y_val = y[train_idx], y[val_idx]
+
+        # 3. 创建 DataLoader
+        train_dataset = TensorDataset(X_train, y_train)
+        train_loader = DataLoader(train_dataset, batch_size=128, shuffle=True)
+
+        # 4. 初始化 FM 模型
+        model = FMs(n=X.shape[1], k=k, w_reg=1e-4, v_reg=1e-4).to(device)
+        criterion = nn.BCELoss()
+        optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+
+        # 5. 训练
+        for epoch in range(epochs):
+            model.train()
+            total_loss = 0
+            for batch_X, batch_y in train_loader:
+                batch_X, batch_y = batch_X.to(device), batch_y.to(device)
+                optimizer.zero_grad()
+                pred = model(batch_X)
+                loss = criterion(pred, batch_y)
+                loss.backward()
+                optimizer.step()
+                total_loss += loss.item()
+            if (epoch + 1) % 20 == 0:
+                print(f"  Epoch {epoch + 1}/{epochs}, Loss: {total_loss / len(train_loader):.4f}")
+
+        # 6. 验证
+        model.eval()
+        with torch.no_grad():
+            X_val = X_val.to(device)
+            y_val_pred = model(X_val).cpu().numpy().flatten()
+            auc = roc_auc_score(y_val.cpu().numpy(), y_val_pred)
+            auc_scores.append(auc)
+            print(f"  Fold {fold + 1} Val AUC: {auc:.4f}")
+
+    print(f"\n===== 交叉验证结果 =====")
+    print(f"平均AUC: {np.mean(auc_scores):.4f} (+/- {np.std(auc_scores):.4f})")
+    print(f"各折AUC: {auc_scores}")
+    return np.array(auc_scores)
+
 
 if __name__ == '__main__':
-    train(file_path =config.CRITEO_FILE, test_size= config.TEST_SIZE)
+    # train(file_path =config.CRITEO_FILE, test_size= config.TEST_SIZE)
+    cross_validate_fm(file_path=config.MOVIELENS_DIR)

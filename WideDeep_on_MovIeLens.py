@@ -400,5 +400,84 @@ def train(file_path):
     # utils.plot_loss_curve(losses, val_losses=None, title='Training Loss')
 
 
+from sklearn.model_selection import KFold
+from sklearn.metrics import roc_auc_score
+import numpy as np
+import torch
+import torch.nn as nn
+from torch.utils.data import DataLoader, TensorDataset
+
+
+from torch.utils.data import DataLoader, TensorDataset
+
+def cross_validate_widedeep(file_path, n_splits=5):
+    # 1. 加载完整数据集（假设返回的是训练集部分，用于交叉验证）
+    (X_dense, X_sparse, y), _, sparse_vocab_sizes = load_movielens_with_context(file_path)
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    kf = KFold(n_splits=n_splits, shuffle=True, random_state=42)
+    auc_scores = []
+
+    for fold, (train_idx, val_idx) in enumerate(kf.split(X_dense)):
+        print(f"\n===== Fold {fold + 1}/{n_splits} =====")
+
+        # 2. 分割数据
+        X_dense_train, X_dense_val = X_dense[train_idx], X_dense[val_idx]
+        X_sparse_train, X_sparse_val = X_sparse[train_idx], X_sparse[val_idx]
+        y_train, y_val = y[train_idx], y[val_idx]
+
+        # 3. 创建 DataLoader（注意：DataLoader 需要 Dataset 对象）
+        train_dataset = TensorDataset(X_dense_train, X_sparse_train, y_train)
+        train_loader = DataLoader(train_dataset, batch_size=config.BATCH_SIZE, shuffle=True)
+
+        # 4. 初始化模型（每折独立）
+        model = WideDeep(
+            dense_num=X_dense_train.shape[1],
+            sparse_vocab_sizes=sparse_vocab_sizes,
+            embed_dim=config.WD_EMBED_DIM,
+            output_dim=1,
+            hidden_units=config.WD_HIDDEN_UNITS,
+            activation='relu'
+        ).to(device)
+        criterion = nn.BCELoss()
+        optimizer = torch.optim.Adam(model.parameters(), lr=config.LEARNING_RATE)
+
+        # 5. 训练模型
+        epochs = 5  # 根据需要调整
+        for epoch in range(epochs):
+            model.train()
+            total_loss = 0
+            for dense_batch, sparse_batch, y_batch in train_loader:
+                dense_batch = dense_batch.to(device)
+                sparse_batch = sparse_batch.to(device)
+                y_batch = y_batch.to(device)
+
+                optimizer.zero_grad()
+                pred = model(dense_batch, sparse_batch)
+                loss = criterion(pred, y_batch)
+                loss.backward()
+                optimizer.step()
+                total_loss += loss.item()
+
+            if (epoch + 1) % 20 == 0:
+                print(f"  Epoch {epoch + 1}/{epochs}, Loss: {total_loss / len(train_loader):.4f}")
+
+        # 6. 验证集评估（直接使用张量，无需重新包装）
+        model.eval()
+        with torch.no_grad():
+            X_dense_val = X_dense_val.to(device)
+            X_sparse_val = X_sparse_val.to(device)
+            y_val_pred = model(X_dense_val, X_sparse_val).cpu().numpy().flatten()
+            auc = roc_auc_score(y_val.cpu().numpy(), y_val_pred)  # y_val 是张量，需转为 numpy
+            auc_scores.append(auc)
+            print(f"  Fold {fold + 1} Val AUC: {auc:.4f}")
+
+    # 7. 输出结果
+    print(f"\n===== 交叉验证结果 =====")
+    print(f"平均AUC: {np.mean(auc_scores):.4f} (+/- {np.std(auc_scores):.4f})")
+    print(f"各折AUC: {auc_scores}")
+    return np.array(auc_scores)
+
 if __name__ == '__main__':
-    train(file_path =config.MOVIELENS_DIR)
+    # train(file_path =config.MOVIELENS_DIR)
+    cross_validate_widedeep(file_path=config.MOVIELENS_DIR)
