@@ -192,10 +192,10 @@ WideDeep在MovieLens上的表现显著优于FM，且该提升在统计上并非�
 ## 局限与改进方向
 当前未做超参数调优，未来可使用Optuna搜索；模型未在完整Criteo数据集上验证，后续可扩展
 
-基于FM的CTR预测: [https://blog.csdn.net/Amarashi/article/details/163417299?spm=1011.2415.3001.5331]
+基于FM的CTR预测: [https://blog.csdn.net/Amarashi/article/details/163417299]
 
-基于WideDeep的CTR预测: [https://blog.csdn.net/Amarashi/article/details/163399394?spm=1011.2415.3001.5331]
+基于WideDeep的CTR预测: [https://blog.csdn.net/Amarashi/article/details/163399394]
 
-基于FM的MovieLens的评分预测: [https://blog.csdn.net/Amarashi/article/details/163483814?spm=1011.2415.3001.5331]
+基于FM的MovieLens的评分预测: [https://blog.csdn.net/Amarashi/article/details/163483814]
 
-基于WideDeep的MovieLens的评分预测:[https://blog.csdn.net/Amarashi/article/details/163542955spm=1011.2415.3001.5331]
+基于WideDeep的MovieLens的评分预测:[https://blog.csdn.net/Amarashi/article/details/163542955]
